@@ -223,3 +223,9 @@ table {
     }
   }
 }
+
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
