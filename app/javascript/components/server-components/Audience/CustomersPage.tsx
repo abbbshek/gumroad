@@ -122,8 +122,6 @@ const CustomersPage = ({
 }) => {
   const currentSeller = useCurrentSeller();
   const userAgentInfo = useUserAgentInfo();
-  const isMobile = userAgentInfo.isMobile;
-
   const [{ customers, pagination, count }, setState] = React.useState<{
     customers: Customer[];
     pagination: PaginationProps | null;
