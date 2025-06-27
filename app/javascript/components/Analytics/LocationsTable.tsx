@@ -49,6 +49,60 @@ const updateTableRow = (
   tableData.set(title, curr);
 };
 
+// Custom hook for sortable table functionality
+const useSortableTable = (
+  data: TableEntry[],
+  initialSort: { key: keyof TableEntry; direction: "asc" | "desc" }
+) => {
+  const [sort, setSort] = React.useState<{ key: keyof TableEntry; direction: "asc" | "desc" }>(initialSort);
+
+  const getDefaultDirection = (columnKey: keyof TableEntry): "asc" | "desc" => {
+    switch (columnKey) {
+      case "name":
+        return "asc"; // Country/State A-Z
+      case "views":
+        return "desc"; // Highest views first
+      case "sales":
+        return "desc"; // Highest sales first
+      case "totals":
+        return "desc"; // Highest revenue first
+      default:
+        return "asc";
+    }
+  };
+
+  const thProps = (key: keyof TableEntry) => ({
+    "aria-sort": sort?.key === key ? (sort.direction === "asc" ? "ascending" : "descending") : "none",
+    onClick: () => {
+      const isCurrentColumn = sort?.key === key;
+      const direction = isCurrentColumn
+        ? (sort.direction === "asc" ? "desc" : "asc") // Toggle if same column
+        : getDefaultDirection(key); // Use custom default if new column
+      setSort({ key, direction });
+    },
+  });
+
+  const sortedItems = React.useMemo(() => {
+    if (!sort) return data;
+
+    return [...data].sort((a, b) => {
+      const aValue = a[sort.key as keyof TableEntry];
+      const bValue = b[sort.key as keyof TableEntry];
+
+      let comparison = 0;
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+      } else {
+        comparison = (aValue as number) - (bValue as number);
+      }
+
+      return sort.direction === "asc" ? comparison : -comparison;
+    });
+  }, [data, sort]);
+
+  return { sortedItems, thProps };
+};
+
 export const AnalyticsCountriesTable = ({
   locationData,
   selectedProducts,
@@ -73,49 +127,11 @@ export const AnalyticsCountriesTable = ({
 
     return [...tableData.values()];
   }, [locationData, selectedProducts]);
-  const [sort, setSort] = React.useState<{ key: keyof TableEntry; direction: "asc" | "desc" }>({
+
+  const { sortedItems, thProps } = useSortableTable(countriesData, {
     key: "totals",
     direction: "desc",
   });
-
-  const getDefaultDirection = (columnKey: keyof TableEntry): "asc" | "desc" => {
-    switch(columnKey) {
-      case "name": return "asc";     // Country A-Z
-      case "views": return "desc";   // Highest views first
-      case "sales": return "desc";   // Highest sales first
-      case "totals": return "desc";  // Highest revenue first
-      default: return "asc";
-    }
-  };
-
-  const customThProps = (key: keyof TableEntry) => ({
-    "aria-sort": sort?.key === key ? (sort.direction === "asc" ? "ascending" : "descending") : "none",
-    onClick: () => {
-      const isCurrentColumn = sort?.key === key;
-      const direction = isCurrentColumn
-        ? (sort.direction === "asc" ? "desc" : "asc")  // Toggle if same column
-        : getDefaultDirection(key);                     // Use custom default if new column
-      setSort({ key, direction });
-    }
-  });
-
-  const sortedItems = React.useMemo(() => {
-    if (!sort) return countriesData;
-
-    return [...countriesData].sort((a, b) => {
-      const aValue = a[sort.key];
-      const bValue = b[sort.key];
-
-      let comparison = 0;
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-      } else {
-        comparison = (aValue as number) - (bValue as number);
-      }
-
-      return sort.direction === "asc" ? comparison : -comparison;
-    });
-  }, [countriesData, sort]);
 
   return (
     <>
@@ -123,10 +139,10 @@ export const AnalyticsCountriesTable = ({
         <caption>{caption}</caption>
         <thead>
           <tr>
-            <th {...customThProps("name")}>Country</th>
-            <th {...customThProps("views")}>Views</th>
-            <th {...customThProps("sales")}>Sales</th>
-            <th {...customThProps("totals")}>Total</th>
+            <th {...thProps("name")}>Country</th>
+            <th {...thProps("views")}>Views</th>
+            <th {...thProps("sales")}>Sales</th>
+            <th {...thProps("totals")}>Total</th>
           </tr>
         </thead>
         <tbody>
@@ -179,49 +195,11 @@ export const AnalyticsStatesTable = ({ locationData, selectedProducts, locations
     }
     return [...tableStatesData.values()];
   }, [locationData, selectedProducts]);
-  const [stateSort, setStateSort] = React.useState<{ key: keyof TableEntry; direction: "asc" | "desc" }>({
+
+  const { sortedItems, thProps } = useSortableTable(statesData, {
     key: "totals",
     direction: "desc",
   });
-
-  const getStateDefaultDirection = (columnKey: keyof TableEntry): "asc" | "desc" => {
-    switch(columnKey) {
-      case "name": return "asc";     // State A-Z
-      case "views": return "desc";   // Highest views first
-      case "sales": return "desc";   // Highest sales first
-      case "totals": return "desc";  // Highest revenue first
-      default: return "asc";
-    }
-  };
-
-  const customStateThProps = (key: keyof TableEntry) => ({
-    "aria-sort": stateSort?.key === key ? (stateSort.direction === "asc" ? "ascending" : "descending") : "none",
-    onClick: () => {
-      const isCurrentColumn = stateSort?.key === key;
-      const direction = isCurrentColumn
-        ? (stateSort.direction === "asc" ? "desc" : "asc")  // Toggle if same column
-        : getStateDefaultDirection(key);                     // Use custom default if new column
-      setStateSort({ key, direction });
-    }
-  });
-
-  const sortedStateItems = React.useMemo(() => {
-    if (!stateSort) return statesData;
-
-    return [...statesData].sort((a, b) => {
-      const aValue = a[stateSort.key];
-      const bValue = b[stateSort.key];
-
-      let comparison = 0;
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-      } else {
-        comparison = (aValue as number) - (bValue as number);
-      }
-
-      return stateSort.direction === "asc" ? comparison : -comparison;
-    });
-  }, [statesData, stateSort]);
 
   return (
     <>
@@ -229,14 +207,14 @@ export const AnalyticsStatesTable = ({ locationData, selectedProducts, locations
         <caption>{caption}</caption>
         <thead>
           <tr>
-            <th {...customStateThProps("name")}>State</th>
-            <th {...customStateThProps("views")}>Views</th>
-            <th {...customStateThProps("sales")}>Sales</th>
-            <th {...customStateThProps("totals")}>Total</th>
+            <th {...thProps("name")}>State</th>
+            <th {...thProps("views")}>Views</th>
+            <th {...thProps("sales")}>Sales</th>
+            <th {...thProps("totals")}>Total</th>
           </tr>
         </thead>
         <tbody>
-          {sortedStateItems.map(({ name, totals, sales, views }) => (
+          {sortedItems.map(({ name, totals, sales, views }) => (
             <tr key={name}>
               <td data-label="State">{name}</td>
               <td data-label="Views">{views}</td>
@@ -249,7 +227,7 @@ export const AnalyticsStatesTable = ({ locationData, selectedProducts, locations
         </tbody>
       </table>
 
-      {!sortedStateItems.length ? <div className="input">Nothing yet </div> : null}
+      {!sortedItems.length ? <div className="input">Nothing yet </div> : null}
     </>
   );
 };
