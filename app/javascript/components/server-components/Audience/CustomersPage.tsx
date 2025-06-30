@@ -456,7 +456,7 @@ const CustomersPage = ({
                         ) : null}
                         {customer.email.length <= 30 ? customer.email : `${customer.email.slice(0, 27)}...`}
                       </td>
-                      <td className={!customer.name ? "hidden-mobile" : ""}>{customer.name}</td>
+                      <td className={!customer.name ? "hidden-mobile-tablet" : ""}>{customer.name}</td>
                       <td>
                         {customer.product.name}
                         {customer.subscription?.is_installment_plan ? (

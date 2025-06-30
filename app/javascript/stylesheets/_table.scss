@@ -224,8 +224,8 @@ table {
   }
 }
 
-@media (max-width: 768px) {
-  .hidden-mobile {
+@media (max-width: 1023px) {
+  .hidden-mobile-tablet {
     display: none !important;
   }
 }
