@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { AnalyticsDataByState, LocationDataValue } from "$app/data/analytics";
 import { formatPriceCentsWithCurrencySymbol } from "$app/utils/currency";
+import { useClientSortingTableDriver } from "$app/components/useSortingTableDriver";
 
 
 
@@ -49,60 +50,6 @@ const updateTableRow = (
   tableData.set(title, curr);
 };
 
-// Custom hook for sortable table functionality
-const useSortableTable = (
-  data: TableEntry[],
-  initialSort: { key: keyof TableEntry; direction: "asc" | "desc" }
-) => {
-  const [sort, setSort] = React.useState<{ key: keyof TableEntry; direction: "asc" | "desc" }>(initialSort);
-
-  const getDefaultDirection = (columnKey: keyof TableEntry): "asc" | "desc" => {
-    switch (columnKey) {
-      case "name":
-        return "asc"; // Country/State A-Z
-      case "views":
-        return "desc"; // Highest views first
-      case "sales":
-        return "desc"; // Highest sales first
-      case "totals":
-        return "desc"; // Highest revenue first
-      default:
-        return "asc";
-    }
-  };
-
-  const thProps = (key: keyof TableEntry) => ({
-    "aria-sort": sort?.key === key ? (sort.direction === "asc" ? "ascending" : "descending") : "none",
-    onClick: () => {
-      const isCurrentColumn = sort?.key === key;
-      const direction = isCurrentColumn
-        ? (sort.direction === "asc" ? "desc" : "asc") // Toggle if same column
-        : getDefaultDirection(key); // Use custom default if new column
-      setSort({ key, direction });
-    },
-  });
-
-  const sortedItems = React.useMemo(() => {
-    if (!sort) return data;
-
-    return [...data].sort((a, b) => {
-      const aValue = a[sort.key as keyof TableEntry];
-      const bValue = b[sort.key as keyof TableEntry];
-
-      let comparison = 0;
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-      } else {
-        comparison = (aValue as number) - (bValue as number);
-      }
-
-      return sort.direction === "asc" ? comparison : -comparison;
-    });
-  }, [data, sort]);
-
-  return { sortedItems, thProps };
-};
-
 export const AnalyticsCountriesTable = ({
   locationData,
   selectedProducts,
@@ -128,7 +75,7 @@ export const AnalyticsCountriesTable = ({
     return [...tableData.values()];
   }, [locationData, selectedProducts]);
 
-  const { sortedItems, thProps } = useSortableTable(countriesData, {
+  const { items, thProps } = useClientSortingTableDriver(countriesData, {
     key: "totals",
     direction: "desc",
   });
@@ -146,7 +93,7 @@ export const AnalyticsCountriesTable = ({
           </tr>
         </thead>
         <tbody>
-          {sortedItems.map(({ name, totals, sales, views }) => (
+          {items.map(({ name, totals, sales, views }) => (
             <tr key={name}>
               <td data-label="Country">
                 <CountryFlag countryCode={countries[name] || ""} />
@@ -161,7 +108,7 @@ export const AnalyticsCountriesTable = ({
           ))}
         </tbody>
       </table>
-      {!sortedItems.length ? <div className="input">Nothing yet </div> : null}
+      {!items.length ? <div className="input">Nothing yet </div> : null}
     </>
   );
 };
@@ -196,7 +143,7 @@ export const AnalyticsStatesTable = ({ locationData, selectedProducts, locations
     return [...tableStatesData.values()];
   }, [locationData, selectedProducts]);
 
-  const { sortedItems, thProps } = useSortableTable(statesData, {
+  const { items, thProps } = useClientSortingTableDriver(statesData, {
     key: "totals",
     direction: "desc",
   });
@@ -214,7 +161,7 @@ export const AnalyticsStatesTable = ({ locationData, selectedProducts, locations
           </tr>
         </thead>
         <tbody>
-          {sortedItems.map(({ name, totals, sales, views }) => (
+          {items.map(({ name, totals, sales, views }) => (
             <tr key={name}>
               <td data-label="State">{name}</td>
               <td data-label="Views">{views}</td>
@@ -227,7 +174,7 @@ export const AnalyticsStatesTable = ({ locationData, selectedProducts, locations
         </tbody>
       </table>
 
-      {!sortedItems.length ? <div className="input">Nothing yet </div> : null}
+      {!items.length ? <div className="input">Nothing yet </div> : null}
     </>
   );
 };
