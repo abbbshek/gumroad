@@ -135,7 +135,7 @@ describe "Sales analytics", :js, :sidekiq_inline, :elasticsearch_wait_for_refres
         expect(page).to have_table_row({ "Country" => "🇯🇵 Japan", "Views" => "0", "Sales" => "1", "Total" => "$5" })
       end
 
-      select_disclosure "12/1/2023 – 12/31/2023" do
+      select_disclosure "12/1/2023 – 12/31/2023" do
         click_on "Custom range..."
         fill_in "From (including)", with: "12/16/2023"
         fill_in "To (including)", with: "12/17/2023"
@@ -151,6 +151,90 @@ describe "Sales analytics", :js, :sidekiq_inline, :elasticsearch_wait_for_refres
       within_table("Locations") do
         expect(page).to have_table_row({ "State" => "New York", "Views" => "0", "Sales" => "1", "Total" => "$5" })
         expect(page).to have_table_row({ "State" => "California", "Views" => "3", "Sales" => "0", "Total" => "$0" })
+      end
+    end
+
+    it "sorts the locations table by total revenue descending by default" do
+      visit sales_dashboard_path(from: "2023-12-01", to: "2023-12-31")
+
+      # Verify the table is sorted by total revenue (highest first)
+      within_table("Locations") do
+        table_rows = all("tbody tr")
+
+        # First row should be United States or Japan ($5 each)
+        first_row_country = table_rows[0].find("td[data-label='Country']").text
+        expect(["🇺🇸 United States", "🇯🇵 Japan"]).to include(first_row_country)
+
+        # Last row should be Italy ($2)
+        last_row_country = table_rows.last.find("td[data-label='Country']").text
+        expect(last_row_country).to eq("🇮🇹 Italy")
+
+        # Verify the Total column header has descending sort indicator
+        total_header = find("th", text: "Total")
+        expect(total_header["aria-sort"]).to eq("descending")
+      end
+
+      # Test clicking Total header toggles to ascending, then back to descending
+      within_table("Locations") do
+        find("th", text: "Total").click
+        wait_for_ajax
+
+        # After clicking once, should be ascending (Italy first)
+        table_rows = all("tbody tr")
+        first_row_country = table_rows[0].find("td[data-label='Country']").text
+        expect(first_row_country).to eq("🇮🇹 Italy")
+
+        total_header = find("th", text: "Total")
+        expect(total_header["aria-sort"]).to eq("ascending")
+
+        # Click again to return to descending
+        find("th", text: "Total").click
+        wait_for_ajax
+
+        table_rows = all("tbody tr")
+        first_row_country = table_rows[0].find("td[data-label='Country']").text
+        expect(["🇺🇸 United States", "🇯🇵 Japan"]).to include(first_row_country)
+
+        total_header = find("th", text: "Total")
+        expect(total_header["aria-sort"]).to eq("descending")
+      end
+    end
+
+    it "sorts the states table by total revenue descending by default" do
+      visit sales_dashboard_path(from: "2023-12-01", to: "2023-12-31")
+
+      # Switch to United States view to see states
+      select "United States", from: "Locations"
+      wait_for_ajax
+
+      # Verify the states table is sorted by total revenue (highest first)
+      within_table("Locations") do
+        table_rows = all("tbody tr")
+
+        # New York should be first ($5), California should be last ($0)
+        first_row_state = table_rows[0].find("td[data-label='State']").text
+        expect(first_row_state).to eq("New York")
+
+        last_row_state = table_rows.last.find("td[data-label='State']").text
+        expect(last_row_state).to eq("California")
+
+        # Verify the Total column header has descending sort indicator
+        total_header = find("th", text: "Total")
+        expect(total_header["aria-sort"]).to eq("descending")
+      end
+
+      # Test clicking Total header toggles sort order
+      within_table("Locations") do
+        find("th", text: "Total").click
+        wait_for_ajax
+
+        # After clicking once, should be ascending (California first)
+        table_rows = all("tbody tr")
+        first_row_state = table_rows[0].find("td[data-label='State']").text
+        expect(first_row_state).to eq("California")
+
+        total_header = find("th", text: "Total")
+        expect(total_header["aria-sort"]).to eq("ascending")
       end
     end
 
