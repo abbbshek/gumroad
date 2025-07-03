@@ -135,7 +135,7 @@ describe "Sales analytics", :js, :sidekiq_inline, :elasticsearch_wait_for_refres
         expect(page).to have_table_row({ "Country" => "🇯🇵 Japan", "Views" => "0", "Sales" => "1", "Total" => "$5" })
       end
 
-      select_disclosure "12/1/2023 – 12/31/2023" do
+      select_disclosure "12/1/2023 – 12/31/2023" do
         click_on "Custom range..."
         fill_in "From (including)", with: "12/16/2023"
         fill_in "To (including)", with: "12/17/2023"

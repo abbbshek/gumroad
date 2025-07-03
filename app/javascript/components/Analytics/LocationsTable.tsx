@@ -2,9 +2,8 @@ import * as React from "react";
 
 import { AnalyticsDataByState, LocationDataValue } from "$app/data/analytics";
 import { formatPriceCentsWithCurrencySymbol } from "$app/utils/currency";
+
 import { useClientSortingTableDriver } from "$app/components/useSortingTableDriver";
-
-
 
 type TableEntry = {
   name: string;
@@ -74,7 +73,6 @@ export const AnalyticsCountriesTable = ({
 
     return [...tableData.values()];
   }, [locationData, selectedProducts]);
-
   const { items, thProps } = useClientSortingTableDriver(countriesData, {
     key: "totals",
     direction: "desc",
@@ -142,7 +140,6 @@ export const AnalyticsStatesTable = ({ locationData, selectedProducts, locations
     }
     return [...tableStatesData.values()];
   }, [locationData, selectedProducts]);
-
   const { items, thProps } = useClientSortingTableDriver(statesData, {
     key: "totals",
     direction: "desc",
