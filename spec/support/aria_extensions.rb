@@ -276,25 +276,23 @@ RSpec::Matchers.define :have_table_rows_in_order do |expected_rows|
     return false unless expected_rows.is_a?(Array) && expected_rows.any?
 
     all_table_rows = actual.all(:table_row)
-    actual_row_indices = []
+    actual_row_positions = []
 
     expected_rows.each_with_index do |row_data, index|
       # `#find` fails the assertion if the row is not found, thus we do not
       # need to handle this error in our own `failure_message` implementation.
-      selector = actual.find(:table_row, row_data)
+      found_row = actual.find(:table_row, row_data)
 
-      if selector
-        actual_row_indices << all_table_rows.index(selector)
-      end
+      actual_row_positions << all_table_rows.index(found_row)
     end
 
-    actual_row_indices.each_with_index do |_, index|
+    actual_row_positions.each_index do |index|
       next if index == 0
 
-      prev_item = actual_row_indices[index - 1]
-      current_item = actual_row_indices[index]
+      prev_position = actual_row_positions[index - 1]
+      current_position = actual_row_positions[index]
 
-      if current_item < prev_item
+      if current_position < prev_position
         @out_of_order_indices = [index - 1, index]
         return false
       end
