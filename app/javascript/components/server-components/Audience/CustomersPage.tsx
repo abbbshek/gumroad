@@ -82,6 +82,7 @@ import { useUserAgentInfo } from "$app/components/UserAgent";
 import { useRunOnce } from "$app/components/useRunOnce";
 import { useSortingTableDriver } from "$app/components/useSortingTableDriver";
 import { WithTooltip } from "$app/components/WithTooltip";
+import { useIsAboveBreakpoint } from "$app/components/useIsAboveBreakpoint";
 
 import placeholder from "$assets/images/placeholders/customers.png";
 
@@ -122,7 +123,7 @@ const CustomersPage = ({
 }) => {
   const currentSeller = useCurrentSeller();
   const userAgentInfo = useUserAgentInfo();
-
+  const isDesktop = useIsAboveBreakpoint("lg");
   const [{ customers, pagination, count }, setState] = React.useState<{
     customers: Customer[];
     pagination: PaginationProps | null;
@@ -457,7 +458,7 @@ const CustomersPage = ({
                         ) : null}
                         {customer.email.length <= 30 ? customer.email : `${customer.email.slice(0, 27)}...`}
                       </td>
-                      <td className={!customer.name ? "hidden-mobile-tablet" : ""}>{customer.name}</td>
+                      <td style={!isDesktop && !customer.name ? { display: 'none' } : undefined}>{customer.name}</td>
                       <td>
                         {customer.product.name}
                         {customer.subscription?.is_installment_plan ? (
