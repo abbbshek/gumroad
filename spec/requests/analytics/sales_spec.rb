@@ -123,7 +123,7 @@ describe "Sales analytics", :js, :sidekiq_inline, :elasticsearch_wait_for_refres
       within_table("Locations") do
         expect(page).to have_table_rows_in_order(
           [
-            { "Country" => "🇸 United States", "Views" => "3", "Sales" => "1", "Total" => "$5" },
+            { "Country" => "🇺🇸 United States", "Views" => "3", "Sales" => "1", "Total" => "$5" },
             { "Country" => "🇯🇵 Japan", "Views" => "0", "Sales" => "1", "Total" => "$5" },
             { "Country" => "🇮🇹 Italy", "Views" => "3", "Sales" => "2", "Total" => "$2" },
           ]
