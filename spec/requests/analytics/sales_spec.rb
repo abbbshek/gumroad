@@ -121,11 +121,13 @@ describe "Sales analytics", :js, :sidekiq_inline, :elasticsearch_wait_for_refres
     it "shows the locations table" do
       visit sales_dashboard_path(from: "2023-12-01", to: "2023-12-31")
       within_table("Locations") do
-        expect(page).to have_table_rows_in_order([
-          { "Country" => "🇸 United States", "Views" => "3", "Sales" => "1", "Total" => "$5" },
-          { "Country" => "🇯🇵 Japan", "Views" => "0", "Sales" => "1", "Total" => "$5" },
-          { "Country" => "🇮🇹 Italy", "Views" => "3", "Sales" => "2", "Total" => "$2" },
-        ])
+        expect(page).to have_table_rows_in_order(
+          [
+            { "Country" => "🇸 United States", "Views" => "3", "Sales" => "1", "Total" => "$5" },
+            { "Country" => "🇯🇵 Japan", "Views" => "0", "Sales" => "1", "Total" => "$5" },
+            { "Country" => "🇮🇹 Italy", "Views" => "3", "Sales" => "2", "Total" => "$2" },
+          ]
+        )
       end
 
       select_disclosure "Select products..." do
@@ -151,10 +153,12 @@ describe "Sales analytics", :js, :sidekiq_inline, :elasticsearch_wait_for_refres
 
       select "United States", from: "Locations"
       within_table("Locations") do
-        expect(page).to have_table_rows_in_order([
-          { "State" => "New York", "Views" => "0", "Sales" => "1", "Total" => "$5" },
-          { "State" => "California", "Views" => "3", "Sales" => "0", "Total" => "$0" },
-        ])
+        expect(page).to have_table_rows_in_order(
+          [
+            { "State" => "New York", "Views" => "0", "Sales" => "1", "Total" => "$5" },
+            { "State" => "California", "Views" => "3", "Sales" => "0", "Total" => "$0" },
+          ]
+        )
       end
     end
 
