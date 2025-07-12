@@ -155,8 +155,9 @@ describe "Product::Searchable - Search scenarios" do
         eur_product = create(:product, :recommendable, price_cents: 8_00, price_currency_type: "eur")
         gbp_product = create(:product, :recommendable, price_cents: 6_00, price_currency_type: "gbp")
 
-        allow(usd_product).to receive(:get_rate).with("eur").and_return("0.85")
-        allow(usd_product).to receive(:get_rate).with("gbp").and_return("0.75")
+        # Mock currency conversion rates
+        allow_any_instance_of(CurrencyHelper).to receive(:get_rate).with("eur").and_return("0.85")
+        allow_any_instance_of(CurrencyHelper).to receive(:get_rate).with("gbp").and_return("0.75")
 
         Link.import(refresh: true, force: true)
 
