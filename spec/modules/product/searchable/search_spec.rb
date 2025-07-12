@@ -170,10 +170,9 @@ describe "Product::Searchable - Search scenarios" do
         # Expected order: USD, EUR, GBP
         expect(response).to have_http_status(:ok)
 
-                # The response should be successful and the sorting should be applied
+        # The response should be successful and the sorting should be applied
         # Note: The actual product order is handled by the React component
         # The currency-aware sorting is applied in the controller before the React props are set
-        expect(response).to have_http_status(:ok)
 
         # Verify that the sorting logic is working by checking the controller's internal state
         # The products should be sorted by USD price in descending order
@@ -201,10 +200,9 @@ describe "Product::Searchable - Search scenarios" do
         # Expected order: GBP, EUR, USD
         expect(response).to have_http_status(:ok)
 
-                # The response should be successful and the sorting should be applied
+        # The response should be successful and the sorting should be applied
         # Note: The actual product order is handled by the React component
         # The currency-aware sorting is applied in the controller before the React props are set
-        expect(response).to have_http_status(:ok)
 
         # Verify that the sorting logic is working by checking the controller's internal state
         # The products should be sorted by USD price in ascending order
@@ -252,6 +250,53 @@ describe "Product::Searchable - Search scenarios" do
         expect(sorted.map(&:id)).to include(usd_product.id)
         expect(sorted.map(&:id)).to include(eur_product.id)
         expect(sorted.map(&:id)).to include(gbp_product.id)
+      end
+
+      it "verifies currency conversion calculation" do
+        # Test the currency conversion logic directly
+        controller = DiscoverController.new
+
+        # Mock rates
+        allow(controller).to receive(:get_rate).with("eur").and_return("0.85")
+        allow(controller).to receive(:get_rate).with("gbp").and_return("0.75")
+
+        # Test conversions
+        eur_converted = controller.send(:get_usd_cents, "eur", 800)
+        gbp_converted = controller.send(:get_usd_cents, "gbp", 600)
+
+        # EUR: 800 cents / 0.85 ≈ 941 cents
+        # GBP: 600 cents / 0.75 = 800 cents
+        expect(eur_converted).to be_within(1).of(941)
+        expect(gbp_converted).to eq(800)
+      end
+
+      it "tests complete currency sorting flow" do
+        # Create products with different currencies
+        usd_product = create(:product, :recommendable, price_cents: 10_00, price_currency_type: "usd")
+        eur_product = create(:product, :recommendable, price_cents: 8_00, price_currency_type: "eur")
+        gbp_product = create(:product, :recommendable, price_cents: 6_00, price_currency_type: "gbp")
+
+        # Verify products were created correctly
+        expect(usd_product.available_price_cents).to eq([10_00])
+        expect(eur_product.available_price_cents).to eq([8_00])
+        expect(gbp_product.available_price_cents).to eq([6_00])
+
+        # Index products
+        Link.import(refresh: true, force: true)
+
+        # Mock currency rates
+        allow_any_instance_of(DiscoverController).to receive(:get_rate).with("eur").and_return("0.85")
+        allow_any_instance_of(DiscoverController).to receive(:get_rate).with("gbp").and_return("0.75")
+
+        # Test the sorting method directly
+        controller = DiscoverController.new
+        products = [eur_product, gbp_product, usd_product]
+
+        sorted_desc = controller.send(:sort_products_by_usd_price, products, ProductSortKey::PRICE_DESCENDING)
+        expect(sorted_desc.map(&:id)).to eq([usd_product.id, eur_product.id, gbp_product.id])
+
+        sorted_asc = controller.send(:sort_products_by_usd_price, products, ProductSortKey::PRICE_ASCENDING)
+        expect(sorted_asc.map(&:id)).to eq([gbp_product.id, eur_product.id, usd_product.id])
       end
 
       it "sorts by fee revenue and sales volume" do

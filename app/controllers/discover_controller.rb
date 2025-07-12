@@ -143,7 +143,9 @@ class DiscoverController < ApplicationController
 
       # Convert all products to USD for comparison
       products_with_usd_prices = products.map do |product|
-        min_price_cents = product.available_price_cents.min
+        available_prices = product.available_price_cents
+        min_price_cents = available_prices.any? ? available_prices.min : 0
+
         usd_price_cents = if product.price_currency_type.downcase == "usd"
           min_price_cents
         else
