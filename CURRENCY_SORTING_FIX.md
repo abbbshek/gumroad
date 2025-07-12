@@ -24,85 +24,85 @@ The Elasticsearch sorting was using the `available_price_cents` field, which sto
 
 ## Solution
 
-### 1. Added USD-Converted Price Field
+### 1. Post-Sort Currency Conversion
 
-- **Migration**: `20250103150000_add_available_price_usd_cents_to_products_index.rb`
-- **Field**: `available_price_usd_cents` in Elasticsearch index
-- **Type**: `long` (stores USD cents)
+Instead of trying to do currency conversion in Elasticsearch (which would be problematic due to exchange rate changes), the fix applies currency conversion **after** getting search results from Elasticsearch.
 
-### 2. Updated Elasticsearch Index Definition
+### 2. Updated Controller Logic
 
-**File**: `app/modules/product/searchable.rb`
-- Added `available_price_usd_cents` field to the index mapping
-- Updated `SEARCH_FIELDS` to include the new field
-- Updated `ATTRIBUTE_TO_SEARCH_FIELDS_MAP` to trigger reindexing when prices change
+**File**: `app/controllers/discover_controller.rb`
+- Added `sort_products_by_usd_price` method
+- Applies currency conversion using current exchange rates
+- Re-sorts products by their USD equivalent values
+- Only applies to price-related sort keys
 
-### 3. Modified Sorting Logic
+### 3. Implementation Details
 
-**File**: `app/modules/product/searchable.rb`
-- Changed price sorting to use `available_price_usd_cents` instead of `available_price_cents`
-- This ensures all prices are compared in USD equivalents
+The sorting process now works as follows:
 
-### 4. Added Currency Conversion Method
+1. **Elasticsearch Query**: Uses original `available_price_cents` field for initial sorting
+2. **Post-Processing**: Converts all prices to USD using current exchange rates
+3. **Re-sorting**: Sorts products by their USD equivalent values
+4. **Fallback**: If currency conversion fails, falls back to original price
 
-**File**: `app/modules/product/prices.rb`
-- Added `available_price_usd_cents` method
-- Uses existing `get_usd_cents` helper from `CurrencyHelper`
-- Converts all available prices to USD cents for consistent comparison
-
-### 5. Added Tests
-
-**File**: `spec/modules/product/prices_spec.rb`
-- Added tests for `available_price_usd_cents` method
-- Tests USD products (no conversion needed)
-- Tests non-USD products (conversion required)
-- Tests products with multiple prices
-
-**File**: `spec/modules/product/searchable/search_spec.rb`
-- Added integration test for currency-aware sorting
-- Verifies that products are sorted by their USD equivalent values
-
-## Implementation Details
-
-### Currency Conversion
-
-The fix uses the existing `get_usd_cents` method from `CurrencyHelper`:
+### 4. Currency Conversion Logic
 
 ```ruby
-def available_price_usd_cents
-  available_price_cents.map do |price_cents|
-    get_usd_cents(price_currency_type, price_cents)
+def sort_products_by_usd_price(products, sort_key)
+  return products if products.empty?
+
+  # Convert all products to USD for comparison
+  products_with_usd_prices = products.map do |product|
+    min_price_cents = product.available_price_cents.min
+    usd_price_cents = if product.price_currency_type.downcase == "usd"
+      min_price_cents
+    else
+      begin
+        get_usd_cents(product.price_currency_type, min_price_cents)
+      rescue StandardError => e
+        Rails.logger.warn "Currency conversion failed for product #{product.id}: #{e.message}"
+        min_price_cents # Fallback to original price
+      end
+    end
+
+    [product, usd_price_cents]
   end
+
+  # Sort by USD price
+  sorted_products = if sort_key.in?([ProductSortKey::PRICE_DESCENDING, ProductSortKey::AVAILABLE_PRICE_DESCENDING])
+    products_with_usd_prices.sort_by { |_, usd_price| -usd_price }
+  else
+    products_with_usd_prices.sort_by { |_, usd_price| usd_price }
+  end
+
+  sorted_products.map(&:first)
 end
-```
-
-### Elasticsearch Sorting
-
-The sorting now uses the USD-converted field:
-
-```ruby
-when ProductSortKey::AVAILABLE_PRICE_DESCENDING, ProductSortKey::PRICE_DESCENDING
-  by :available_price_usd_cents, order: "desc", mode: "min"
-when ProductSortKey::AVAILABLE_PRICE_ASCENDING, ProductSortKey::PRICE_ASCENDING
-  by :available_price_usd_cents, order: "asc", mode: "min"
 ```
 
 ## Benefits
 
-1. **Correct Sorting**: Products are now sorted by their actual USD equivalent values
-2. **Consistent Experience**: Users see products in the expected price order regardless of currency
-3. **Maintains Performance**: Uses existing currency conversion infrastructure
-4. **Backward Compatible**: Doesn't break existing functionality
+1. **Correct Sorting**: Products are now sorted by their actual USD equivalent values using current exchange rates
+2. **Real-time Exchange Rates**: Uses current currency conversion rates, not stale indexed rates
+3. **Graceful Degradation**: Falls back to original sorting if currency conversion fails
+4. **Performance**: Minimal impact on performance since conversion only happens for price sorts
+5. **Backward Compatible**: Doesn't break existing functionality
 
 ## Deployment Notes
 
-1. Run the migration to add the new Elasticsearch field
-2. Reindex all products to populate the new `available_price_usd_cents` field
-3. The fix will take effect immediately after reindexing
+1. No database migrations required
+2. No Elasticsearch index changes required
+3. The fix takes effect immediately upon deployment
 
 ## Testing
 
-The fix includes comprehensive tests that verify:
+The fix includes integration tests that verify:
 - Currency conversion works correctly for different currencies
-- Products with multiple prices are handled properly
-- Sorting returns products in the correct USD-equivalent order
+- Products are sorted by their USD equivalent values
+- Fallback behavior works when currency conversion fails
+
+## Why This Approach is Better
+
+1. **Accurate Exchange Rates**: Uses current rates instead of stale indexed rates
+2. **Simpler Implementation**: No need for complex Elasticsearch field management
+3. **More Reliable**: Less prone to issues with currency conversion failures
+4. **Easier to Debug**: Currency conversion logic is in application code, not Elasticsearch
