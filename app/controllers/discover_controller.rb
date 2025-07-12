@@ -36,7 +36,7 @@ class DiscoverController < ApplicationController
 
     @search_results = search_products(params)
 
-    # Apply currency-aware sorting for price sorts
+    # Apply currency-aware sorting for price sorts (only on discover page)
     if params[:sort]&.in?([ProductSortKey::PRICE_ASCENDING, ProductSortKey::PRICE_DESCENDING,
                           ProductSortKey::AVAILABLE_PRICE_ASCENDING, ProductSortKey::AVAILABLE_PRICE_DESCENDING])
       @search_results[:products] = sort_products_by_usd_price(@search_results[:products], params[:sort])

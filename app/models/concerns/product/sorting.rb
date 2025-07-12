@@ -45,6 +45,8 @@ module Product::Sorting
 
       case key
       when DISPLAY_PRICE_CENTS
+        # For internal sorting (seller dashboards), use direct price sorting without currency conversion
+        # Currency-aware sorting is only applied on the discover page
         sort = direction == "desc" ? ProductSortKey::AVAILABLE_PRICE_DESCENDING : ProductSortKey::AVAILABLE_PRICE_ASCENDING
       when IS_RECOMMENDABLE
         sort = direction == "desc" ? ProductSortKey::IS_RECOMMENDABLE_DESCENDING : ProductSortKey::IS_RECOMMENDABLE_ASCENDING
