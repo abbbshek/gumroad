@@ -5,7 +5,7 @@ class DiscoverController < ApplicationController
   INITIAL_PRODUCTS_COUNT = 36
 
   include ActionView::Helpers::NumberHelper, RecommendationType, CreateDiscoverSearch,
-          DiscoverCuratedProducts, SearchProducts, AffiliateCookie, CurrencyHelper
+          DiscoverCuratedProducts, SearchProducts, AffiliateCookie
 
   allow_anonymous_access_to_helper_widget only: [:index]
 
@@ -35,12 +35,6 @@ class DiscoverController < ApplicationController
     params[:size] = INITIAL_PRODUCTS_COUNT
 
     @search_results = search_products(params)
-
-    # Apply currency-aware sorting for price sorts (only on discover page)
-    if params[:sort]&.in?([ProductSortKey::PRICE_ASCENDING, ProductSortKey::PRICE_DESCENDING,
-                          ProductSortKey::AVAILABLE_PRICE_ASCENDING, ProductSortKey::AVAILABLE_PRICE_DESCENDING])
-      @search_results[:products] = sort_products_by_usd_price(@search_results[:products], params[:sort])
-    end
 
     @search_results[:products] = @search_results[:products].includes(ProductPresenter::ASSOCIATIONS_FOR_CARD).map do |product|
       ProductPresenter.card_for_web(
@@ -138,35 +132,5 @@ class DiscoverController < ApplicationController
       end
     end
 
-    def sort_products_by_usd_price(products, sort_key)
-      return products if products.empty?
 
-      # Convert all products to USD for comparison
-      products_with_usd_prices = products.map do |product|
-        available_prices = product.available_price_cents
-        min_price_cents = available_prices.any? ? available_prices.min : 0
-
-        usd_price_cents = if product.price_currency_type.downcase == "usd"
-          min_price_cents
-        else
-          begin
-            get_usd_cents(product.price_currency_type, min_price_cents)
-          rescue StandardError => e
-            Rails.logger.warn "Currency conversion failed for product #{product.id}: #{e.message}"
-            min_price_cents # Fallback to original price
-          end
-        end
-
-        [product, usd_price_cents]
-      end
-
-      # Sort by USD price
-      sorted_products = if sort_key.in?([ProductSortKey::PRICE_DESCENDING, ProductSortKey::AVAILABLE_PRICE_DESCENDING])
-        products_with_usd_prices.sort_by { |_, usd_price| -usd_price }
-      else
-        products_with_usd_prices.sort_by { |_, usd_price| usd_price }
-      end
-
-      sorted_products.map(&:first)
-    end
 end
