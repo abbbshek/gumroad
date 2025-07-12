@@ -5,7 +5,7 @@ class DiscoverController < ApplicationController
   INITIAL_PRODUCTS_COUNT = 36
 
   include ActionView::Helpers::NumberHelper, RecommendationType, CreateDiscoverSearch,
-          DiscoverCuratedProducts, SearchProducts, AffiliateCookie
+          DiscoverCuratedProducts, SearchProducts, AffiliateCookie, CurrencyHelper
 
   allow_anonymous_access_to_helper_widget only: [:index]
 
