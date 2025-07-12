@@ -275,6 +275,37 @@ describe Product::Prices do
     end
   end
 
+  describe "#available_price_usd_cents" do
+    context "for USD products" do
+      let(:product) { create(:product, price_cents: 5_00, price_currency_type: "usd") }
+
+      it "returns the same values as available_price_cents" do
+        expect(product.available_price_usd_cents).to match_array([5_00])
+      end
+    end
+
+    context "for non-USD products" do
+      let(:product) { create(:product, price_cents: 5_00, price_currency_type: "eur") }
+
+      it "converts prices to USD cents" do
+        allow(product).to receive(:get_rate).with("eur").and_return("0.85")
+        expect(product.available_price_usd_cents).to match_array([588]) # 500 / 0.85 ≈ 588
+      end
+    end
+
+    context "for products with multiple prices" do
+      let(:product) { create(:product, price_cents: 10_00, price_currency_type: "gbp") }
+      let(:category) { create(:variant_category, link: product) }
+      let!(:variant1) { create(:variant, variant_category: category, price_difference_cents: 200) }
+      let!(:variant2) { create(:variant, variant_category: category, price_difference_cents: 500) }
+
+      it "converts all prices to USD cents" do
+        allow(product).to receive(:get_rate).with("gbp").and_return("1.25")
+        expect(product.available_price_usd_cents).to match_array([960, 1200]) # 1000/1.25=800, 1200/1.25=960, 1500/1.25=1200
+      end
+    end
+  end
+
   describe "#display_price" do
     it "returns formatted display_price" do
       digital_product = create(:product, price_cents: 5_00)

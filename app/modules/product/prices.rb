@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Product::Prices
+  include CurrencyHelper
   include BasePrice::Shared
 
   # Public: Alias for default_price_cents in order to hide the price_cents column, which isn't used anymore in favor of the Price model.
@@ -238,6 +239,12 @@ module Product::Prices
       end
 
     available_prices.uniq
+  end
+
+  def available_price_usd_cents
+    available_price_cents.map do |price_cents|
+      get_usd_cents(price_currency_type, price_cents)
+    end
   end
 
   private

@@ -150,6 +150,27 @@ describe "Product::Searchable - Search scenarios" do
         assert_equal expected, records.map(&:id)
       end
 
+      it "sorts by price with currency conversion" do
+        usd_product = create(:product, :recommendable, price_cents: 10_00, price_currency_type: "usd")
+        eur_product = create(:product, :recommendable, price_cents: 8_00, price_currency_type: "eur")
+        gbp_product = create(:product, :recommendable, price_cents: 6_00, price_currency_type: "gbp")
+
+        allow(usd_product).to receive(:get_rate).with("eur").and_return("0.85")
+        allow(usd_product).to receive(:get_rate).with("gbp").and_return("0.75")
+
+        Link.import(refresh: true, force: true)
+
+        params = { sort: ProductSortKey::PRICE_DESCENDING }
+        search_options = Link.search_options(params)
+        records = Link.search(search_options).records
+
+        # USD: 1000 cents = $10
+        # EUR: 800 cents / 0.85 ≈ 941 USD cents ≈ $9.41
+        # GBP: 600 cents / 0.75 = 800 USD cents = $8.00
+        # Expected order: USD, EUR, GBP
+        expect(records.map(&:id)).to eq([usd_product.id, eur_product.id, gbp_product.id])
+      end
+
       it "sorts by fee revenue and sales volume" do
         search_options = Link.search_options({ sort: ProductSortKey::FEATURED })
         records = Link.search(search_options).records
