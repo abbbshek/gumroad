@@ -242,8 +242,16 @@ module Product::Prices
   end
 
   def available_price_usd_cents
+    return [] if available_price_cents.empty?
+
     available_price_cents.map do |price_cents|
-      get_usd_cents(price_currency_type, price_cents)
+      begin
+        get_usd_cents(price_currency_type, price_cents)
+      rescue StandardError => e
+        Rails.logger.warn "Currency conversion failed for product #{id}: #{e.message}"
+        # Fallback to original price if conversion fails
+        price_cents
+      end
     end
   end
 

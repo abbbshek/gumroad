@@ -304,6 +304,23 @@ describe Product::Prices do
         expect(product.available_price_usd_cents).to match_array([960, 1200]) # 1000/1.25=800, 1200/1.25=960, 1500/1.25=1200
       end
     end
+
+    context "when currency conversion fails" do
+      let(:product) { create(:product, price_cents: 5_00, price_currency_type: "eur") }
+
+      it "falls back to original price" do
+        allow(product).to receive(:get_usd_cents).and_raise(StandardError.new("Conversion failed"))
+        expect(product.available_price_usd_cents).to match_array([5_00])
+      end
+    end
+
+    context "for products with no prices" do
+      let(:product) { create(:product, price_cents: nil) }
+
+      it "returns empty array" do
+        expect(product.available_price_usd_cents).to eq([])
+      end
+    end
   end
 
   describe "#display_price" do
